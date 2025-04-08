@@ -163,6 +163,58 @@ int MEMPHY_dump(struct memphy_struct *mp)
   /*TODO dump memphy contnt mp->storage
    *     for tracing the memory content
    */
+   if (mp == NULL) {
+      printf("Memory physical structure is NULL\n");
+      return -1;
+   }
+
+   printf("\n--- Memory Physical Dump (size: %d bytes) ---\n", mp->maxsz);
+   printf("Access Mode: %s\n", mp->rdmflg ? "Random" : "Sequential");
+
+   // Dump memory content in hex and ASCII
+   for (int i = 0; i < mp->maxsz; i += 16) {
+      // Print address
+      printf("%08x: ", i);
+      
+      // Print hex values
+      for (int j = 0; j < 16; j++) {
+         if (i + j < mp->maxsz) {
+            printf("%02x ", mp->storage[i + j]);
+         } else {
+            printf("   "); // Padding for incomplete lines
+         }
+         
+         // Extra space every 8 bytes
+         if (j == 7) printf(" ");
+      }
+      
+      printf(" |");
+      
+      // Print ASCII characters
+      for (int j = 0; j < 16; j++) {
+         if (i + j >= mp->maxsz) break;
+         
+         BYTE c = mp->storage[i + j];
+         if (c >= 32 && c <= 126) { // Printable ASCII range
+            printf("%c", c);
+         } else {
+            printf(".");
+         }
+      }
+      
+      printf("|\n");
+   }
+
+   // Dump free frame list
+   printf("\nFree Frame List:\n");
+   struct framephy_struct *fp = mp->free_fp_list;
+   while (fp != NULL) {
+      printf("Frame %d -> ", fp->fpn);
+      fp = fp->fp_next;
+   }
+   printf("NULL\n");
+
+   return 0;
    return 0;
 }
 

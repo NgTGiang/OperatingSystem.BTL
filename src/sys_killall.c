@@ -1,5 +1,4 @@
-/*
- * Copyright (C) 2025 pdnguyen of HCMC University of Technology VNU-HCM
+/* Copyright (C) 2025 pdnguyen of HCMC University of Technology VNU-HCM
  */
 
 /* Sierra release
@@ -28,7 +27,10 @@ int __sys_killall(struct pcb_t *caller, struct sc_regs* regs)
     while(data != -1){
         libread(caller, memrg, i, &data);
         proc_name[i]= data;
-        if(data == -1) proc_name[i]='\0';
+        if (data == -1) {
+            proc_name[i] = '\0';
+            break; // Add a break to exit the loop when data == -1
+        }
         i++;
     }
     printf("The procname retrieved from memregionid %d is \"%s\"\n", memrg, proc_name);
@@ -43,6 +45,29 @@ int __sys_killall(struct pcb_t *caller, struct sc_regs* regs)
      *       all processes with given
      *        name in var proc_name
      */
+    
+
+    struct pcb_t *proc;
+    struct list_head *pos, *n;
+    
+    
+    // list_for_each_safe(pos, n, &caller->running_list) {
+    //     proc = list_entry(pos, struct pcb_t, list);
+
+    //     if (strcmp(proc->name, proc_name) == 0) {
+    //         printf("Terminating process: %s (PID: %d)\n", proc->name, proc->pid);
+    //         terminate_process(proc); // Gọi hàm hủy tiến trình
+    //     }
+    // }
+
+    // list_for_each_safe(pos, n, &caller->mlq_ready_queue) {
+    //     proc = list_entry(pos, struct pcb_t, list);
+
+    //     if (strcmp(proc->name, proc_name) == 0) {
+    //         printf("Terminating process in ready queue: %s (PID: %d)\n", proc->name, proc->pid);
+    //         terminate_process(proc);
+    //     }
+    // }
 
     return 0; 
 }
