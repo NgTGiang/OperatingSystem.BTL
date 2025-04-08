@@ -89,33 +89,49 @@ int __alloc(struct pcb_t *caller, int vmaid, int rgid, int size, int *alloc_addr
 
   /* TODO retrive current vma if needed, current comment out due to compiler redundant warning*/
   /*Attempt to increate limit to get space */
-  //struct vm_area_struct *cur_vma = get_vma_by_num(caller->mm, vmaid);
+  struct vm_area_struct *cur_vma = get_vma_by_num(caller->mm, vmaid);
+  if (cur_vma == NULL) {
+    pthread_mutex_unlock(&mmvm_lock);
+    return -1;
+  }
 
-
-  //int inc_sz = PAGING_PAGE_ALIGNSZ(size);
-  //int inc_limit_ret;
+  int inc_sz = PAGING_PAGE_ALIGNSZ(size);
 
   /* TODO retrive old_sbrk if needed, current comment out due to compiler redundant warning*/
-  //int old_sbrk = cur_vma->sbrk;
+  int old_sbrk = cur_vma->sbrk;
 
   /* TODO INCREASE THE LIMIT as inovking systemcall 
    * sys_memap with SYSMEM_INC_OP 
    */
-  //struct sc_regs regs;
-  //regs.a1 = ...
-  //regs.a2 = ...
-  //regs.a3 = ...
+  struct sc_regs regs;
+  regs.a1 = vmaid;
+  regs.a2 = SYSMEM_INC_OP;
+  regs.a3 = inc_sz;
+  syscall(caller, 17, &regs);
   
   /* SYSCALL 17 sys_memmap */
 
   /* TODO: commit the limit increment */
+  cur_vma->sbrk += inc_sz;
+  cur_vma->vm_end += inc_sz;
 
   /* TODO: commit the allocation address 
   // *alloc_addr = ...
   */
+  if (get_free_vmrg_area(caller, vmaid, size, &rgnode) == 0)
+  {
+    caller->mm->symrgtbl[rgid].rg_start = rgnode.rg_start;
+    caller->mm->symrgtbl[rgid].rg_end = rgnode.rg_end;
 
-  return 0;
+    /* TODO: commit the allocation address */
+    *alloc_addr = rgnode.rg_start;
 
+    pthread_mutex_unlock(&mmvm_lock);
+    return 0;
+  }
+
+  pthread_mutex_unlock(&mmvm_lock);
+  return -1;
 }
 
 /*__free - remove a region memory
@@ -127,8 +143,11 @@ int __alloc(struct pcb_t *caller, int vmaid, int rgid, int size, int *alloc_addr
  */
 int __free(struct pcb_t *caller, int vmaid, int rgid)
 {
-  //struct vm_rg_struct rgnode;
 
+  struct vm_rg_struct *rgnode = get_symrg_byid(caller->mm, rgid);
+  if (rgnode == NULL) {
+    return -1;
+  }
   // Dummy initialization for avoding compiler dummay warning
   // in incompleted TODO code rgnode will overwrite through implementing
   // the manipulation of rgid later
@@ -137,10 +156,22 @@ int __free(struct pcb_t *caller, int vmaid, int rgid)
     return -1;
 
   /* TODO: Manage the collect freed region to freerg_list */
-  
+  struct vm_rg_struct *freed_rg = malloc(sizeof(struct vm_rg_struct));
+  if (freed_rg == NULL) {
+    return -1;
+  }
+  freed_rg->rg_start = rgnode->rg_start;
+  freed_rg->rg_end = rgnode->rg_end;
+  freed_rg->rg_next = NULL;
+
+  if (enlist_vm_freerg_list(caller->mm, freed_rg) != 0) {
+    free(freed_rg);
+    return -1;
+  }
 
   /*enlist the obsoleted memory region */
   //enlist_vm_freerg_list();
+  rgnode->rg_start = rgnode->rg_end = 0;
 
   return 0;
 }
