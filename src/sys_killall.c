@@ -12,6 +12,11 @@
 #include "syscall.h"
 #include "stdio.h"
 #include "libmem.h"
+#include "queue.h"
+#include <string.h>
+#include <stdlib.h>
+
+void free_pcb_mem(struct pcb_t *proc);
 
 int __sys_killall(struct pcb_t *caller, struct sc_regs* regs)
 {
@@ -36,13 +41,61 @@ int __sys_killall(struct pcb_t *caller, struct sc_regs* regs)
     /* TODO: Traverse proclist to terminate the proc
      *       stcmp to check the process match proc_name
      */
-    //caller->running_list
-    //caller->mlq_ready_queu
+    // Process the running list
+    if (caller->running_list != NULL) {
+        for (i = 0; i < caller->running_list->size; i++) {
+            struct pcb_t *proc = caller->running_list->proc[i];
+            if (proc != NULL && strcmp(proc->path, proc_name) == 0) {
+                // Free memory regions
+                free_pcb_mem(proc);
+                for (int j = i; j < caller->running_list->size - 1; j++) {
+                    caller->running_list->proc[j] = caller->running_list->proc[j + 1];
+                }
+                caller->running_list->size--;
+                free(proc);
+                i--;
+            }
+        }
+    }
 
     /* TODO Maching and terminating 
      *       all processes with given
      *        name in var proc_name
      */
+#ifdef MLQ_SCHED
+    // Process the MLQ ready queue
+    if (caller->mlq_ready_queue != NULL) {
+        for (i = 0; i < caller->mlq_ready_queue->size; i++) {
+            struct pcb_t *proc = caller->mlq_ready_queue->proc[i];
+            if (proc != NULL && strcmp(proc->path, proc_name) == 0) {
+                free_pcb_mem(proc);
+                
+                for (int j = i; j < caller->mlq_ready_queue->size - 1; j++) {
+                    caller->mlq_ready_queue->proc[j] = caller->mlq_ready_queue->proc[j + 1];
+                }
+                caller->mlq_ready_queue->size--;
+                
+                free(proc);
+                i--;
+            }
+        }
+    }
+#endif
 
     return 0; 
+}
+
+// Helper function to free process memory
+void free_pcb_mem(struct pcb_t *proc) {
+    if (proc->mm && proc->mm->mmap) {
+        struct vm_area_struct *vma = proc->mm->mmap;
+        
+        while (vma != NULL) {
+            struct vm_area_struct *next_vma = vma->vm_next;
+            
+            libfree(proc, vma->vm_id);
+            
+            vma = next_vma;
+        }
+    }
 }
