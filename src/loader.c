@@ -1,4 +1,3 @@
-
 #include "loader.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -100,6 +99,3 @@ struct pcb_t * load(const char * path) {
 	}
 	return proc;
 }
-
-
-
