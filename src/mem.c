@@ -11,8 +11,7 @@ static struct {
 	uint32_t proc;	// ID of process currently uses this page
 	int index;	// Index of the page in the list of pages allocated
 			// to the process.
-	int next;	// The next page in the list. -1 if it is the last
-			// page.
+	int next;	// The next page in the list. -1 if it is the last page.
 } _mem_stat [NUM_PAGES];
 
 static pthread_mutex_t mem_lock;
@@ -40,19 +39,14 @@ static addr_t get_second_lv(addr_t addr) {
 
 /* Search for page table table from the a segment table */
 static struct trans_table_t * get_trans_table(
-		addr_t index, 	// Segment level index
-		struct page_table_t * page_table) { // first level table
+	addr_t index, 	// Segment level index
+	struct page_table_t * page_table) { // first level table
 	
 	/* DO NOTHING HERE. This mem is obsoleted */
 
 	int i;
 	for (i = 0; i < page_table->size; i++) {
 		// Enter your code here
-		// Check if this entry matches our segment index
-        if (page_table->table[i].v_index == index) {
-            // Return pointer to the corresponding translation table
-            return page_table->table[i].next_lv;
-        }
 	}
 	return NULL;
 
@@ -108,29 +102,6 @@ addr_t alloc_mem(uint32_t size, struct pcb_t * proc) {
 	 * to know whether this page has been used by a process.
 	 * For virtual memory space, check bp (break pointer).
 	 * */
-
-	// Check the amount of free memory in physical address space
-	if(proc->bp + num_pages * PAGE_SIZE > proc->mram->maxsz) {
-		pthread_mutex_unlock(&mem_lock);
-		return 0; // Allocation failed
-	}
-
-	#define MAX_VIRTUAL_ADDR (1UL << 32)  // For 32-bit address space
-	if(proc->bp + num_pages * PAGE_SIZE > MAX_VIRTUAL_ADDR) {
-		pthread_mutex_unlock(&mem_lock);
-		return 0;  // Allocation failed
-	}
-	
-	int free_pages = 0;
-	for(int i = 0; i < NUM_PAGES; ++i) {
-		if(_mem_stat[i].proc == 0) {
-			++free_pages;
-			if(free_pages >= num_pages) {
-				mem_avail = 1;
-				break;
-			}
-		}
-	}
 	
 	if (mem_avail) {
 		/* We could allocate new memory region to the process */
@@ -142,19 +113,6 @@ addr_t alloc_mem(uint32_t size, struct pcb_t * proc) {
 		 * 	- Add entries to segment table page tables of [proc]
 		 * 	  to ensure accesses to allocated memory slot is
 		 * 	  valid. */
-		
-		int prev_page_index = -1;
-		for(uint32_t i = 0; i < num_pages; ++i) {
-			int page_index = (ret_mem >> OFFSET_LEN) + 1;
-			_mem_stat[page_index].proc = proc->pid;
-			_mem_stat[page_index].index = i;
-			_mem_stat[page_index].next = (i == num_pages - 1) ? -1 : page_index + 1;
-
-			if(prev_page_index != -1) {
-				_mem_stat[prev_page_index].next = page_index;
-			}
-			prev_page_index = page_index;
-		}
 	}
 	pthread_mutex_unlock(&mem_lock);
 	return ret_mem;
@@ -205,10 +163,7 @@ void dump(void) {
 				if (_ram[j] != 0) {
 					printf("\t%05x: %02x\n", j, _ram[j]);
 				}
-					
 			}
 		}
 	}
 }
-
-

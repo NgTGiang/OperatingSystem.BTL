@@ -1,13 +1,13 @@
-// #ifdef MM_PAGING
 /*
- * PAGING based Memory Management
- * Memory management unit mm/mm.c
- */
+* PAGING based Memory Management
+* Memory management unit mm/mm.c
+*/
 
 #include "mm.h"
 #include <stdlib.h>
 #include <stdio.h>
 
+#ifdef MM_PAGING
 /*
  * init_pte - Initialize PTE entry
  */
@@ -86,7 +86,7 @@ int vmap_page_range(struct pcb_t *caller,           // process call
                     struct framephy_struct *frames, // list of the mapped frames
                     struct vm_rg_struct *ret_rg)    // return mapped region, the real mapped fp
 {                                                   // no guarantee all given pages are mapped
-  struct framephy_struct *fpit;
+  //struct framephy_struct *fpit;
   int pgit = 0;
   int pgn = PAGING_PGN(addr);
 
@@ -95,9 +95,7 @@ int vmap_page_range(struct pcb_t *caller,           // process call
   //ret_rg->rg_start = ...
   //ret_rg->vmaid = ...
   */
-  ret_rg->rg_start = addr;
-  ret_rg->rg_end = addr + pgnum * PAGING_PAGESZ;
-  ret_rg->rg_next = NULL;
+
   /* TODO map range of frame to address space
    *      [addr to addr + pgnum*PAGING_PAGESZ
    *      in page table caller->mm->pgd[]
@@ -105,12 +103,7 @@ int vmap_page_range(struct pcb_t *caller,           // process call
 
   /* Tracking for later page replacement activities (if needed)
    * Enqueue new usage page */
-  while (fpit != NULL && pgit < pgnum) {
-    pte_set_fpn(&caller->mm->pgd[pgn + pgit], fpit->fpn);
-    enlist_pgn_node(&caller->mm->fifo_pgn, pgn + pgit);
-    fpit = fpit->fp_next;
-    pgit++;
-  }
+  enlist_pgn_node(&caller->mm->fifo_pgn, pgn + pgit);
 
   return 0;
 }
@@ -126,9 +119,7 @@ int alloc_pages_range(struct pcb_t *caller, int req_pgnum, struct framephy_struc
 {
   int pgit, fpn;
   struct framephy_struct *newfp_str = NULL;
-  struct framephy_struct *prev = NULL;
 
-  *frm_lst = NULL;
   /* TODO: allocate the page 
   //caller-> ...
   //frm_lst-> ...
@@ -140,20 +131,10 @@ int alloc_pages_range(struct pcb_t *caller, int req_pgnum, struct framephy_struc
    */
     if (MEMPHY_get_freefp(caller->mram, &fpn) == 0)
     {
-      newfp_str = malloc(sizeof(struct framephy_struct));
       newfp_str->fpn = fpn;
-      newfp_str->fp_next = NULL;
-
-      if (*frm_lst == NULL) {
-        *frm_lst = newfp_str;
-      } else {
-        prev->fp_next = newfp_str;
-      }
-      prev = newfp_str;
     }
     else
     { // TODO: ERROR CODE of obtaining somes but not enough frames
-      return -3000;
     }
   }
 
@@ -375,4 +356,4 @@ int print_pgtbl(struct pcb_t *caller, uint32_t start, uint32_t end)
   return 0;
 }
 
-// #endif
+#endif
