@@ -1,5 +1,5 @@
-#ifndef QUEUE_H
-#define QUEUE_H
+#ifndef SCHED_H
+#define SCHED_H
 
 #include "common.h"
 
@@ -9,9 +9,13 @@
 
 #define MAX_PRIO 140
 
+// Checks if all relevant queues (ready and run queues) are empty.
 int queue_empty(void);
 
+// Initializes the scheduler’s data structures.
 void init_scheduler(void);
+
+// Cleans up scheduler resources (not implemented in provided code).
 void finish_scheduler(void);
 
 /* Get the next process from ready queue */
