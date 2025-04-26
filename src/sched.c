@@ -1,4 +1,3 @@
-
 #include "queue.h"
 #include "sched.h"
 #include <pthread.h>
@@ -51,31 +50,30 @@ struct pcb_t * get_mlq_proc(void) {
 	/*TODO: get a process from PRIORITY [ready_queue].
 	 * Remember to use lock to protect the queue.
 	 * */
-	static uint32_t curr_prio = 0;
-	static int curr_slot = 0;
-
-	pthread_mutex_lock(&queue_lock);
-
-	for (int i = 0; i < MAX_PRIO; i++) {
-		uint32_t prio = (curr_prio + i) % MAX_PRIO;
-
-		if (!empty(&mlq_ready_queue[prio])) {
-			proc = dequeue(&mlq_ready_queue[prio]);
-
-			curr_slot--;
-
-			if (curr_slot <= 0) {
-				curr_prio = (prio + 1) % MAX_PRIO;
-				curr_slot = slot[curr_prio];
-			}
-
-			break;
-		}
-	}
-
-	pthread_mutex_unlock(&queue_lock);
-	
-	return proc;
+	 int check  = 0;
+    pthread_mutex_lock(&queue_lock);
+    for (int i = 0; i < MAX_PRIO; i++) {
+        if (slot[i] > 0 && !empty(&mlq_ready_queue[i])) {
+            proc = dequeue(&mlq_ready_queue[i]);
+            slot[i]--; 
+            check = 1;
+            break;
+        }
+    }
+    if (!check) {
+        for (int i = 0; i < MAX_PRIO; i++) {
+            slot[i] = MAX_PRIO - i;
+        }
+        for (int i = 0; i < MAX_PRIO; i++) {
+            if (slot[i] > 0 && !empty(&mlq_ready_queue[i])) {
+                proc = dequeue(&mlq_ready_queue[i]);
+                slot[i]--;
+                break;
+            }
+        }
+    }    
+    pthread_mutex_unlock(&queue_lock);
+    return proc;	
 }
 
 void put_mlq_proc(struct pcb_t * proc) {
@@ -120,6 +118,7 @@ void add_proc(struct pcb_t * proc) {
 	return add_mlq_proc(proc);
 }
 #else
+
 struct pcb_t * get_proc(void) {
 	struct pcb_t * proc = NULL;
 	/*TODO: get a process from [ready_queue].
@@ -162,5 +161,3 @@ void add_proc(struct pcb_t * proc) {
 	pthread_mutex_unlock(&queue_lock);	
 }
 #endif
-
-
