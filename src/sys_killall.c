@@ -20,8 +20,8 @@
 /* Forward declaration */
 extern int free_pcb_memph(struct pcb_t *caller);
 
-/* Get queue_lock from scheduler */
-extern pthread_mutex_t queue_lock;
+/* Define queue_lock */
+pthread_mutex_t queue_lock = PTHREAD_MUTEX_INITIALIZER;
 
 int __sys_killall(struct pcb_t *caller, struct sc_regs* regs)
 {
@@ -46,7 +46,7 @@ int __sys_killall(struct pcb_t *caller, struct sc_regs* regs)
     /* Traverse running list to terminate matching processes */
     struct queue_t *running = caller->running_list;
     
-    /* Use external lock from scheduler */
+    /* Use queue_lock from scheduler */
     pthread_mutex_lock(&queue_lock);
     
     /* Check all processes in running queue */

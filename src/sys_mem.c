@@ -11,7 +11,6 @@
 #include "syscall.h"
 #include "libmem.h"
 #include "mm.h"
-#include <stdlib.h>
 
 typedef char BYTE;
 
@@ -22,22 +21,7 @@ int __sys_memmap(struct pcb_t *caller, struct sc_regs* regs)
 
    switch (memop) {
    case SYSMEM_MAP_OP:
-            /* Map memory for process */
-            struct vm_area_struct *cur_vma = get_vma_by_num(caller->mm, regs->a2);
-            if (cur_vma != NULL) {
-                /* Allocate memory region */
-                struct vm_rg_struct *new_rg = malloc(sizeof(struct vm_rg_struct));
-                new_rg->rg_start = cur_vma->vm_start;
-                new_rg->rg_end = cur_vma->vm_end;
-                
-                /* Map to physical memory */
-                int num_pages = (new_rg->rg_end - new_rg->rg_start) / PAGING_PAGESZ;
-                if (vm_map_ram(caller, new_rg->rg_start, new_rg->rg_end, 
-                              new_rg->rg_start, num_pages, new_rg) < 0) {
-                    free(new_rg);
-                    return -1;
-                }
-            }
+            /* Reserved process case*/
             break;
    case SYSMEM_INC_OP:
             inc_vma_limit(caller, regs->a2, regs->a3);
