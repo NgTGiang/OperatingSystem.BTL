@@ -13,7 +13,7 @@
 #include "mm.h"
 #include <stdlib.h>
 
-//typedef char BYTE;
+typedef char BYTE;
 
 int __sys_memmap(struct pcb_t *caller, struct sc_regs* regs)
 {
