@@ -73,28 +73,28 @@ int pte_set_fpn(uint32_t *pte, int fpn)
 {
   SETBIT(*pte, PAGING_PTE_PRESENT_MASK);
   CLRBIT(*pte, PAGING_PTE_SWAPPED_MASK);
-
   SETVAL(*pte, fpn, PAGING_PTE_FPN_MASK, PAGING_PTE_FPN_LOBIT);
-
   return 0;
 }
 
 /*
  * vmap_page_range - map a range of page at aligned address
  */
-int vmap_page_range(struct pcb_t *caller,           // process call
-                    int addr,                       // start address which is aligned to pagesz
-                    int pgnum,                      // num of mapping page
-                    struct framephy_struct *frames, // list of the mapped frames
-                    struct vm_rg_struct *ret_rg)    // return mapped region, the real mapped fp
-{                                                   // no guarantee all given pages are mapped
+int vmap_page_range(struct pcb_t *caller, int addr, int pgnum, 
+                   struct framephy_struct *frames, struct vm_rg_struct *ret_rg)
+{
+  if (frames == NULL || pgnum <= 0) {
+    return -1;
+  }
+
+  int total_size = pgnum * PAGING_PAGESZ;
+
   struct framephy_struct *fpit = frames;
   int pgit = 0;
   int pgn = PAGING_PGN(addr);
 
-  /* Update returned region */
   ret_rg->rg_start = addr;
-  ret_rg->rg_end = addr + pgnum * PAGING_PAGESZ;
+  ret_rg->rg_end = addr + total_size;
   ret_rg->rg_next = NULL;
 
   /* Map range of frame to address space */
@@ -218,16 +218,25 @@ int __swap_cp_page(struct memphy_struct *mpsrc, int srcfpn,
 {
   int cellidx;
   int addrsrc, addrdst;
+  BYTE data;
+  
+  if (mpsrc == NULL || mpdst == NULL || 
+      srcfpn < 0 || dstfpn < 0) {
+    return -1;
+  }
+  
   for (cellidx = 0; cellidx < PAGING_PAGESZ; cellidx++)
   {
     addrsrc = srcfpn * PAGING_PAGESZ + cellidx;
     addrdst = dstfpn * PAGING_PAGESZ + cellidx;
-
-    BYTE data;
-    MEMPHY_read(mpsrc, addrsrc, &data);
-    MEMPHY_write(mpdst, addrdst, data);
+    
+    if (MEMPHY_read(mpsrc, addrsrc, &data) != 0) {
+      return -1;
+    }
+    if (MEMPHY_write(mpdst, addrdst, data) != 0) {
+      return -1;
+    }
   }
-
   return 0;
 }
 
@@ -366,7 +375,7 @@ int print_list_pgn(struct pgn_t *ip)
     printf("va[%d]-\n", ip->pgn);
     ip = ip->pg_next;
   }
-  printf("n");
+  printf("\n");
   return 0;
 }
 

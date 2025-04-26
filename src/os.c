@@ -57,38 +57,49 @@ static void *cpu_routine(void *args)
 		/* Check the status of current process */
 		if (proc == NULL)
 		{
-			/* No process is running, then we load new process from
+			/* No process is running, the we load new process from
 			 * ready queue */
 			proc = get_proc();
 			if (proc == NULL)
 			{
-				if (done && queue_empty())
-				{
-					/* No process to run, exit */
-					printf("\tCPU %d stopped\n", id);
-					break;
-				}
 				next_slot(timer_id);
 				continue; /* First load failed. skip dummy load */
 			}
-			time_left = time_slot;
-			printf("\tCPU %d: Dispatched process %2d\n", id, proc->pid);
 		}
 		else if (proc->pc == proc->code->size)
 		{
 			/* The process has finished its job */
 			printf("\tCPU %d: Processed %2d has finished\n", id, proc->pid);
 			free(proc);
-			proc = NULL;
-			continue;
+			proc = get_proc();
+			time_left = 0;
 		}
 		else if (time_left == 0)
 		{
 			/* The process has done its job in current time slot */
 			printf("\tCPU %d: Put process %2d to run queue\n", id, proc->pid);
 			put_proc(proc);
-			proc = NULL;
+			proc = get_proc();
+		}
+
+		/* Recheck process status after loading new process */
+		if (proc == NULL && done)
+		{
+			/* No process to run, exit */
+			printf("\tCPU %d stopped\n", id);
+			break;
+		}
+		else if (proc == NULL)
+		{
+			/* There may be new processes to run in
+			 * next time slots, just skip current slot */
+			next_slot(timer_id);
 			continue;
+		}
+		else if (time_left == 0)
+		{
+			printf("\tCPU %d: Dispatched process %2d\n", id, proc->pid);
+			time_left = time_slot;
 		}
 
 		/* Run current process */
@@ -101,12 +112,12 @@ static void *cpu_routine(void *args)
 		switch (inst->opcode)
 		{
 		case CALC:
-			printf("calc\n");
+			// printf("calc\n");
 			break;
 		case ALLOC:
 			printf("===== PHYSICAL MEMORY AFTER ALLOCATION =====\n");
 			printf("PID=%d - Region=%d - Address=%08x - Size=%d byte\n",
-						 proc->pid, inst->arg_0, inst->arg_1, inst->arg_2);
+						 proc->pid, inst->arg_2, inst->arg_1, inst->arg_0);
 			if (proc->mm != NULL)
 			{
 				print_pgtbl(proc, 0, 1024);
@@ -190,13 +201,10 @@ static void *cpu_routine(void *args)
 			printf("syscall %d %d %d %d\n",
 						 inst->arg_0, inst->arg_1, inst->arg_2, inst->arg_3);
 			break;
-		default:
-			printf("unknown instruction\n");
 		}
 
 		next_slot(timer_id);
 	}
-	/* Mark this device as finished */
 	detach_event(timer_id);
 	pthread_exit(NULL);
 }
@@ -252,34 +260,34 @@ static void read_config(const char *path)
 		printf("Cannot find configure file at %s\n", path);
 		exit(1);
 	}
+
+	// Đọc thông tin cấu hình cơ bản
 	fscanf(file, "%d %d %d\n", &time_slot, &num_cpus, &num_processes);
-	ld_processes.path = (char **)malloc(sizeof(char *) * num_processes);
-	ld_processes.start_time = (unsigned long *)
-			malloc(sizeof(unsigned long) * num_processes);
 
 #ifdef MM_PAGING
-	/* Read memory config */
-	unsigned long tmp;
-	fscanf(file, "%d %lu", &memramsz, &tmp); // Read as unsigned long
-	memswpsz[0] = tmp;											 // Convert to int
-	for (int sit = 1; sit < PAGING_MAX_MMSWP; sit++)
+	// Đọc thông tin cấu hình bộ nhớ
+	fscanf(file, "%d", &memramsz);
+	for (int i = 0; i < PAGING_MAX_MMSWP; i++)
 	{
-		fscanf(file, "%d", &memswpsz[sit]);
+		fscanf(file, "%d", &memswpsz[i]);
 	}
 	fscanf(file, "\n");
 #endif
 
+	// Cấp phát bộ nhớ cho các mảng
+	ld_processes.path = (char **)malloc(sizeof(char *) * num_processes);
+	ld_processes.start_time = (unsigned long *)malloc(sizeof(unsigned long) * num_processes);
 #ifdef MLQ_SCHED
-	ld_processes.prio = (unsigned long *)
-			malloc(sizeof(unsigned long) * num_processes);
+	ld_processes.prio = (unsigned long *)malloc(sizeof(unsigned long) * num_processes);
 #endif
 
-	int i;
-	for (i = 0; i < num_processes; i++)
+	// Đọc thông tin từng process
+	for (int i = 0; i < num_processes; i++)
 	{
 		ld_processes.path[i] = (char *)malloc(sizeof(char) * 100);
 		ld_processes.path[i][0] = '\0';
 		strcat(ld_processes.path[i], "input/proc/");
+
 		char proc[100];
 #ifdef MLQ_SCHED
 		fscanf(file, "%lu %s %lu\n", &ld_processes.start_time[i], proc, &ld_processes.prio[i]);
@@ -288,6 +296,8 @@ static void read_config(const char *path)
 #endif
 		strcat(ld_processes.path[i], proc);
 	}
+
+	fclose(file);
 }
 
 int main(int argc, char *argv[])
