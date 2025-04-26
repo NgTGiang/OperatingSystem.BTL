@@ -1,4 +1,3 @@
-
 #include "timer.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -51,7 +50,10 @@ static void * timer_routine(void * args) {
 			pthread_cond_signal(&temp->id.timer_cond);
 			pthread_mutex_unlock(&temp->id.timer_lock);
 		}
-		if (fsh == event) {
+		
+		/* Check if all devices are finished */
+		if (fsh == event && event > 0) {
+			timer_stop = 1;
 			break;
 		}
 	}
@@ -119,9 +121,18 @@ struct timer_id_t * attach_event() {
 
 void stop_timer() {
 	timer_stop = 1;
+	/* Wait for all devices to finish */
+	struct timer_id_container_t * temp;
+	for (temp = dev_list; temp != NULL; temp = temp->next) {
+		pthread_mutex_lock(&temp->id.timer_lock);
+		pthread_cond_signal(&temp->id.timer_cond);
+		pthread_mutex_unlock(&temp->id.timer_lock);
+	}
 	pthread_join(_timer, NULL);
+	
+	/* Clean up */
 	while (dev_list != NULL) {
-		struct timer_id_container_t * temp = dev_list;
+		temp = dev_list;
 		dev_list = dev_list->next;
 		pthread_cond_destroy(&temp->id.event_cond);
 		pthread_mutex_destroy(&temp->id.event_lock);

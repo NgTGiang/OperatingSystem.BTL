@@ -1,4 +1,3 @@
-
 #include "cpu.h"
 #include "timer.h"
 #include "sched.h"
@@ -53,49 +52,127 @@ static void * cpu_routine(void * args) {
 	while (1) {
 		/* Check the status of current process */
 		if (proc == NULL) {
-			/* No process is running, the we load new process from
-		 	* ready queue */
+			/* No process is running, then we load new process from
+			 * ready queue */
 			proc = get_proc();
 			if (proc == NULL) {
-                           next_slot(timer_id);
-                           continue; /* First load failed. skip dummy load */
-                        }
-		}else if (proc->pc == proc->code->size) {
-			/* The porcess has finish it job */
-			printf("\tCPU %d: Processed %2d has finished\n",
-				id ,proc->pid);
-			free(proc);
-			proc = get_proc();
-			time_left = 0;
-		}else if (time_left == 0) {
-			/* The process has done its job in current time slot */
-			printf("\tCPU %d: Put process %2d to run queue\n",
-				id, proc->pid);
-			put_proc(proc);
-			proc = get_proc();
-		}
-		
-		/* Recheck process status after loading new process */
-		if (proc == NULL && done) {
-			/* No process to run, exit */
-			printf("\tCPU %d stopped\n", id);
-			break;
-		}else if (proc == NULL) {
-			/* There may be new processes to run in
-			 * next time slots, just skip current slot */
-			next_slot(timer_id);
-			continue;
-		}else if (time_left == 0) {
-			printf("\tCPU %d: Dispatched process %2d\n",
-				id, proc->pid);
+				if (done && queue_empty()) {
+					/* No process to run, exit */
+					printf("\tCPU %d stopped\n", id);
+					break;
+				}
+				next_slot(timer_id);
+				continue; /* First load failed. skip dummy load */
+			}
 			time_left = time_slot;
+			printf("\tCPU %d: Dispatched process %2d\n", id, proc->pid);
+		} else if (proc->pc == proc->code->size) {
+			/* The process has finished its job */
+			printf("\tCPU %d: Processed %2d has finished\n", id, proc->pid);
+			free(proc);
+			proc = NULL;
+			continue;
+		} else if (time_left == 0) {
+			/* The process has done its job in current time slot */
+			printf("\tCPU %d: Put process %2d to run queue\n", id, proc->pid);
+			put_proc(proc);
+			proc = NULL;
+			continue;
 		}
 		
 		/* Run current process */
+		int pc_before = proc->pc;
 		run(proc);
 		time_left--;
+
+		/* Print debug info */
+		struct inst_t * inst = &proc->code->text[pc_before];
+		switch (inst->opcode) {
+		case CALC:
+			printf("calc\n");
+			break;
+		case ALLOC:
+			printf("===== PHYSICAL MEMORY AFTER ALLOCATION =====\n");
+			printf("PID=%d - Region=%d - Address=%08x - Size=%d byte\n", 
+				proc->pid, inst->arg_0, inst->arg_1, inst->arg_2);
+			if (proc->mm != NULL) {
+				print_pgtbl(proc, 0, 1024);
+				/* Print page to frame mapping */
+				for (int i = 0; i < 1024; i++) {
+					if (proc->mm->pgd[i] != 0) {
+						printf("Page Number: %d -> Frame Number: %d\n", 
+							i, proc->mm->pgd[i] & 0xFFFF);
+					}
+				}
+			}
+			printf("================================================================\n");
+			break;
+		case FREE:
+			printf("===== PHYSICAL MEMORY AFTER DEALLOCATION =====\n");
+			printf("PID=%d - Region=%d\n", proc->pid, inst->arg_0);
+			if (proc->mm != NULL) {
+				print_pgtbl(proc, 0, 1024);
+				/* Print page to frame mapping */
+				for (int i = 0; i < 1024; i++) {
+					if (proc->mm->pgd[i] != 0) {
+						printf("Page Number: %d -> Frame Number: %d\n", 
+							i, proc->mm->pgd[i] & 0xFFFF);
+					}
+				}
+			}
+			printf("================================================================\n");
+			break;
+		case READ:
+			printf("===== PHYSICAL MEMORY AFTER READING =====\n");
+			printf("read region=%d offset=%d value=%d\n", 
+				inst->arg_0, inst->arg_1, inst->arg_2);
+			if (proc->mm != NULL) {
+				print_pgtbl(proc, 0, 1024);
+				/* Print page to frame mapping */
+				for (int i = 0; i < 1024; i++) {
+					if (proc->mm->pgd[i] != 0) {
+						printf("Page Number: %d -> Frame Number: %d\n", 
+							i, proc->mm->pgd[i] & 0xFFFF);
+					}
+				}
+			}
+			printf("================================================================\n");
+			printf("===== PHYSICAL MEMORY DUMP =====\n");
+			printf("BYTE %08x: %d\n", inst->arg_1, inst->arg_2);
+			printf("===== PHYSICAL MEMORY END-DUMP =====\n");
+			printf("================================================================\n");
+			break;
+		case WRITE:
+			printf("===== PHYSICAL MEMORY AFTER WRITING =====\n");
+			printf("write region=%d offset=%d value=%d\n", 
+				inst->arg_0, inst->arg_1, inst->arg_2);
+			if (proc->mm != NULL) {
+				print_pgtbl(proc, 0, 1024);
+				/* Print page to frame mapping */
+				for (int i = 0; i < 1024; i++) {
+					if (proc->mm->pgd[i] != 0) {
+						printf("Page Number: %d -> Frame Number: %d\n", 
+							i, proc->mm->pgd[i] & 0xFFFF);
+					}
+				}
+			}
+			printf("================================================================\n");
+			printf("===== PHYSICAL MEMORY DUMP =====\n");
+			printf("BYTE %08x: %d\n", inst->arg_1, inst->arg_2);
+			printf("===== PHYSICAL MEMORY END-DUMP =====\n");
+			printf("================================================================\n");
+			break;
+		case SYSCALL:
+			printf("syscall %d %d %d %d\n",
+				inst->arg_0, inst->arg_1, inst->arg_2, inst->arg_3);
+			break;
+		default:
+			printf("unknown instruction\n");
+		}
+
 		next_slot(timer_id);
 	}
+	/* Mark this device as finished */
 	detach_event(timer_id);
 	pthread_exit(NULL);
 }
@@ -150,35 +227,23 @@ static void read_config(const char * path) {
 	ld_processes.path = (char**)malloc(sizeof(char*) * num_processes);
 	ld_processes.start_time = (unsigned long*)
 		malloc(sizeof(unsigned long) * num_processes);
-#ifdef MM_PAGING
-	int sit;
-#ifdef MM_FIXED_MEMSZ
-	/* We provide here a back compatible with legacy OS simulatiom config file
-         * In which, it have no addition config line for Mema, keep only one line
-	 * for legacy info 
-         *  [time slice] [N = Number of CPU] [M = Number of Processes to be run]
-         */
-        memramsz    =  0x100000;
-        memswpsz[0] = 0x1000000;
-	for(sit = 1; sit < PAGING_MAX_MMSWP; sit++)
-		memswpsz[sit] = 0;
-#else
-	/* Read input config of memory size: MEMRAM and upto 4 MEMSWP (mem swap)
-	 * Format: (size=0 result non-used memswap, must have RAM and at least 1 SWAP)
-	 *        MEM_RAM_SZ MEM_SWP0_SZ MEM_SWP1_SZ MEM_SWP2_SZ MEM_SWP3_SZ
-	*/
-	fscanf(file, "%d\n", &memramsz);
-	for(sit = 0; sit < PAGING_MAX_MMSWP; sit++)
-		fscanf(file, "%d", &(memswpsz[sit])); 
 
-       fscanf(file, "\n"); /* Final character */
-#endif
+#ifdef MM_PAGING
+	/* Read memory config */
+	unsigned long tmp;
+	fscanf(file, "%d %lu", &memramsz, &tmp);  // Read as unsigned long
+	memswpsz[0] = tmp;  // Convert to int
+	for(int sit = 1; sit < PAGING_MAX_MMSWP; sit++) {
+		fscanf(file, "%d", &memswpsz[sit]);
+	}
+	fscanf(file, "\n");
 #endif
 
 #ifdef MLQ_SCHED
 	ld_processes.prio = (unsigned long*)
 		malloc(sizeof(unsigned long) * num_processes);
 #endif
+
 	int i;
 	for (i = 0; i < num_processes; i++) {
 		ld_processes.path[i] = (char*)malloc(sizeof(char) * 100);
