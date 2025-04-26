@@ -160,29 +160,32 @@ int MEMPHY_get_freefp(struct memphy_struct *mp, int *retfpn)
 
 int MEMPHY_dump(struct memphy_struct *mp)
 {
-  int pg_num = mp->maxsz / PAGING_PAGESZ;
-  
-  for (int pg = 0; pg < pg_num; pg++) {
-   //  printf("Page %d:", pg);
-    
-    /* Print content of each page */
-    for (int i = 0; i < PAGING_PAGESZ && (pg * PAGING_PAGESZ + i) < mp->maxsz; i++) {
-      // if (i % 16 == 0) printf("\n%04x: ", i);
-      // printf("%02x ", mp->storage[pg * PAGING_PAGESZ + i]);
-    }
-   //  printf("\n\n");
-  }
-  
-  /* Print free frame list */
-//   printf("Free frames: ");
-  struct framephy_struct *fp = mp->free_fp_list;
-  while (fp != NULL) {
-   //  printf("%d ", fp->fpn);
-    fp = fp->fp_next;
-  }
-  printf("\n");
-  
-  return 0;
+   int pg_num = mp->maxsz / PAGING_PAGESZ;
+
+   for (int pg = 0; pg < pg_num; pg++)
+   {
+      //  printf("Page %d:", pg);
+
+      /* Print content of each page */
+      for (int i = 0; i < PAGING_PAGESZ && (pg * PAGING_PAGESZ + i) < mp->maxsz; i++)
+      {
+         // if (i % 16 == 0) printf("\n%04x: ", i);
+         // printf("%02x ", mp->storage[pg * PAGING_PAGESZ + i]);
+      }
+      //  printf("\n\n");
+   }
+
+   /* Print free frame list */
+   //   printf("Free frames: ");
+   struct framephy_struct *fp = mp->free_fp_list;
+   while (fp != NULL)
+   {
+      //  printf("%d ", fp->fpn);
+      fp = fp->fp_next;
+   }
+   printf("\n");
+
+   return 0;
 }
 
 int MEMPHY_put_freefp(struct memphy_struct *mp, int fpn)

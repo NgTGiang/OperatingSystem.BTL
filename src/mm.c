@@ -19,10 +19,12 @@ int init_pte(uint32_t *pte,
              int swptyp, // swap type
              int swpoff) // swap offset
 {
-  if (pre != 0) {
-    if (swp == 0) { // Non swap ~ page online
+  if (pre != 0)
+  {
+    if (swp == 0)
+    { // Non swap ~ page online
       if (fpn == 0)
-        return -1;  // Invalid setting
+        return -1; // Invalid setting
 
       /* Valid setting with FPN */
       SETBIT(*pte, PAGING_PTE_PRESENT_MASK);
@@ -96,13 +98,14 @@ int vmap_page_range(struct pcb_t *caller,           // process call
   ret_rg->rg_next = NULL;
 
   /* Map range of frame to address space */
-  while (fpit != NULL && pgit < pgnum) {
+  while (fpit != NULL && pgit < pgnum)
+  {
     /* Map a frame to page table */
     pte_set_fpn(&caller->mm->pgd[pgn + pgit], fpit->fpn);
-    
+
     /* Tracking for later page replacement activities */
     enlist_pgn_node(&caller->mm->fifo_pgn, pgn + pgit);
-    
+
     /* Next frame */
     fpit = fpit->fp_next;
     pgit++;
@@ -131,23 +134,29 @@ int alloc_pages_range(struct pcb_t *caller, int req_pgnum, struct framephy_struc
     {
       newfp_str->fpn = fpn;
       newfp_str->fp_next = NULL;
-      
+
       /* First frame */
-      if (*frm_lst == NULL) {
+      if (*frm_lst == NULL)
+      {
         *frm_lst = newfp_str;
         last_fp = newfp_str;
-      } else {
+      }
+      else
+      {
         /* Append to list */
         last_fp->fp_next = newfp_str;
         last_fp = newfp_str;
       }
     }
     else
-    { 
+    {
       /* Error handling - not enough frames */
-      if (pgit == 0) {
-        return -1;  // No frames allocated at all
-      } else {
+      if (pgit == 0)
+      {
+        return -1; // No frames allocated at all
+      }
+      else
+      {
         return -3000; // Some frames allocated
       }
     }
@@ -288,7 +297,11 @@ int print_list_fp(struct framephy_struct *ifp)
   struct framephy_struct *fp = ifp;
 
   printf("print_list_fp: ");
-  if (fp == NULL) { printf("NULL list\n"); return -1;}
+  if (fp == NULL)
+  {
+    printf("NULL list\n");
+    return -1;
+  }
   printf("\n");
   while (fp != NULL)
   {
@@ -304,7 +317,11 @@ int print_list_rg(struct vm_rg_struct *irg)
   struct vm_rg_struct *rg = irg;
 
   printf("print_list_rg: ");
-  if (rg == NULL) { printf("NULL list\n"); return -1; }
+  if (rg == NULL)
+  {
+    printf("NULL list\n");
+    return -1;
+  }
   printf("\n");
   while (rg != NULL)
   {
@@ -320,7 +337,11 @@ int print_list_vma(struct vm_area_struct *ivma)
   struct vm_area_struct *vma = ivma;
 
   printf("print_list_vma: ");
-  if (vma == NULL) { printf("NULL list\n"); return -1; }
+  if (vma == NULL)
+  {
+    printf("NULL list\n");
+    return -1;
+  }
   printf("\n");
   while (vma != NULL)
   {
@@ -334,7 +355,11 @@ int print_list_vma(struct vm_area_struct *ivma)
 int print_list_pgn(struct pgn_t *ip)
 {
   printf("print_list_pgn: ");
-  if (ip == NULL) { printf("NULL list\n"); return -1; }
+  if (ip == NULL)
+  {
+    printf("NULL list\n");
+    return -1;
+  }
   printf("\n");
   while (ip != NULL)
   {
@@ -360,7 +385,11 @@ int print_pgtbl(struct pcb_t *caller, uint32_t start, uint32_t end)
   pgn_end = PAGING_PGN(end);
 
   printf("print_pgtbl: %d - %d", start, end);
-  if (caller == NULL) { printf("NULL caller\n"); return -1;}
+  if (caller == NULL)
+  {
+    printf("NULL caller\n");
+    return -1;
+  }
   printf("\n");
 
   for (pgit = pgn_start; pgit < pgn_end; pgit++)

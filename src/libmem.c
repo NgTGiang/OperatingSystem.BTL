@@ -11,7 +11,7 @@
 // #ifdef MM_PAGING
 /*
  * System Library
- * Memory Module Library libmem.c 
+ * Memory Module Library libmem.c
  */
 
 #include "string.h"
@@ -85,7 +85,7 @@ int __alloc(struct pcb_t *caller, int vmaid, int rgid, int size, int *alloc_addr
   {
     caller->mm->symrgtbl[rgid].rg_start = rgnode.rg_start;
     caller->mm->symrgtbl[rgid].rg_end = rgnode.rg_end;
- 
+
     *alloc_addr = rgnode.rg_start;
 
     pthread_mutex_unlock(&mmvm_lock);
@@ -102,18 +102,19 @@ int __alloc(struct pcb_t *caller, int vmaid, int rgid, int size, int *alloc_addr
   regs.a1 = SYSMEM_INC_OP;
   regs.a2 = vmaid;
   regs.a3 = inc_sz;
-  
+
   /* SYSCALL 17 sys_memmap */
   int sys_ret = SYSCALL(SC_MEMMAP, &regs);
-  
-  if (sys_ret < 0) {
+
+  if (sys_ret < 0)
+  {
     pthread_mutex_unlock(&mmvm_lock);
     return -1;
   }
 
   /* Update allocation address */
   *alloc_addr = old_sbrk;
-  
+
   /* Update symbol table */
   caller->mm->symrgtbl[rgid].rg_start = old_sbrk;
   caller->mm->symrgtbl[rgid].rg_end = old_sbrk + size;
@@ -133,7 +134,7 @@ int __free(struct pcb_t *caller, int vmaid, int rgid)
 {
   struct vm_rg_struct *rgnode = malloc(sizeof(struct vm_rg_struct));
 
-  if(rgid < 0 || rgid > PAGING_MAX_SYMTBL_SZ)
+  if (rgid < 0 || rgid > PAGING_MAX_SYMTBL_SZ)
     return -1;
 
   /* Get the region from symbol table */
@@ -192,11 +193,11 @@ int pg_getpage(struct mm_struct *mm, int pgn, int *fpn, struct pcb_t *caller)
 
   if (!PAGING_PAGE_PRESENT(pte))
   { /* Page is not online, make it actively living */
-    int vicpgn, swpfpn; 
+    int vicpgn, swpfpn;
     int vicfpn;
     uint32_t vicpte;
 
-    int tgtfpn = PAGING_PTE_SWP(pte); //the target frame storing our variable
+    int tgtfpn = PAGING_PTE_SWP(pte); // the target frame storing our variable
 
     /* Find victim page */
     find_victim_page(caller->mm, &vicpgn);
@@ -211,7 +212,7 @@ int pg_getpage(struct mm_struct *mm, int pgn, int *fpn, struct pcb_t *caller)
     regs.a1 = SYSMEM_SWP_OP;
     regs.a2 = vicfpn;
     regs.a3 = swpfpn;
-    
+
     /* SYSCALL 17 sys_memmap */
     SYSCALL(SC_MEMMAP, &regs);
 
@@ -222,7 +223,7 @@ int pg_getpage(struct mm_struct *mm, int pgn, int *fpn, struct pcb_t *caller)
     regs.a1 = SYSMEM_SWP_OP;
     regs.a2 = tgtfpn;
     regs.a3 = vicfpn;
-    
+
     /* SYSCALL 17 sys_memmap */
     SYSCALL(SC_MEMMAP, &regs);
 
@@ -256,14 +257,14 @@ int pg_getval(struct mm_struct *mm, int addr, BYTE *data, struct pcb_t *caller)
 
   /* Calculate physical address and read */
   int phyaddr = (fpn << PAGING_ADDR_FPN_LOBIT) + off;
-  
+
   struct sc_regs regs;
   regs.a1 = SYSMEM_IO_READ;
   regs.a2 = phyaddr;
-  
+
   /* SYSCALL 17 sys_memmap */
   SYSCALL(SC_MEMMAP, &regs);
-  
+
   /* Update data */
   *data = (BYTE)regs.a3;
 
@@ -288,12 +289,12 @@ int pg_setval(struct mm_struct *mm, int addr, BYTE value, struct pcb_t *caller)
 
   /* Calculate physical address and write */
   int phyaddr = (fpn << PAGING_ADDR_FPN_LOBIT) + off;
-  
+
   struct sc_regs regs;
   regs.a1 = SYSMEM_IO_WRITE;
   regs.a2 = phyaddr;
   regs.a3 = value;
-  
+
   /* SYSCALL 17 sys_memmap */
   SYSCALL(SC_MEMMAP, &regs);
 
@@ -326,17 +327,17 @@ int libread(
     struct pcb_t *proc, // Process executing the instruction
     uint32_t source,    // Index of source register
     uint32_t offset,    // Source address = [source] + [offset]
-    uint32_t* destination)
+    uint32_t *destination)
 {
   BYTE data;
   int val = __read(proc, 0, source, offset, &data);
 
   /* TODO update result of reading action*/
-  //destination 
+  // destination
 #ifdef IODUMP
   printf("read region=%d offset=%d value=%d\n", source, offset, data);
 #ifdef PAGETBL_DUMP
-  print_pgtbl(proc, 0, -1); //print max TBL
+  print_pgtbl(proc, 0, -1); // print max TBL
 #endif
   MEMPHY_dump(proc->mram);
 #endif
@@ -375,7 +376,7 @@ int libwrite(
 #ifdef IODUMP
   printf("write region=%d offset=%d value=%d\n", destination, offset, data);
 #ifdef PAGETBL_DUMP
-  print_pgtbl(proc, 0, -1); //print max TBL
+  print_pgtbl(proc, 0, -1); // print max TBL
 #endif
   MEMPHY_dump(proc->mram);
 #endif
@@ -393,24 +394,24 @@ int free_pcb_memph(struct pcb_t *caller)
   int pagenum, fpn;
   uint32_t pte;
 
-
-  for(pagenum = 0; pagenum < PAGING_MAX_PGN; pagenum++)
+  for (pagenum = 0; pagenum < PAGING_MAX_PGN; pagenum++)
   {
-    pte= caller->mm->pgd[pagenum];
+    pte = caller->mm->pgd[pagenum];
 
     if (!PAGING_PAGE_PRESENT(pte))
     {
       fpn = PAGING_PTE_FPN(pte);
       MEMPHY_put_freefp(caller->mram, fpn);
-    } else {
+    }
+    else
+    {
       fpn = PAGING_PTE_SWP(pte);
-      MEMPHY_put_freefp(caller->active_mswp, fpn);    
+      MEMPHY_put_freefp(caller->active_mswp, fpn);
     }
   }
 
   return 0;
 }
-
 
 /*find_victim_page - find victim page
  *@caller: caller
@@ -420,16 +421,16 @@ int free_pcb_memph(struct pcb_t *caller)
 int find_victim_page(struct mm_struct *mm, int *retpgn)
 {
   struct pgn_t *pg = mm->fifo_pgn;
-  
-  if (pg == NULL) 
+
+  if (pg == NULL)
     return -1;
 
   /* Get first page in FIFO queue */
   *retpgn = pg->pgn;
-  
+
   /* Update FIFO queue */
   mm->fifo_pgn = pg->pg_next;
-  
+
   free(pg);
 
   return 0;
@@ -453,29 +454,34 @@ int get_free_vmrg_area(struct pcb_t *caller, int vmaid, int size, struct vm_rg_s
   newrg->rg_start = newrg->rg_end = -1;
 
   /* Traverse free region list to find suitable space */
-  while (rgit != NULL) {
-    if (rgit->rg_end - rgit->rg_start >= size) {
+  while (rgit != NULL)
+  {
+    if (rgit->rg_end - rgit->rg_start >= size)
+    {
       /* Found a suitable region */
       newrg->rg_start = rgit->rg_start;
       newrg->rg_end = rgit->rg_start + size;
       newrg->rg_next = NULL;
 
       /* Update free region list */
-      if (rgit->rg_end - rgit->rg_start == size) {
+      if (rgit->rg_end - rgit->rg_start == size)
+      {
         /* Use entire region, remove from list */
         cur_vma->vm_freerg_list = rgit->rg_next;
         free(rgit);
-      } else {
+      }
+      else
+      {
         /* Use part of region, update start */
         rgit->rg_start += size;
       }
-      
+
       return 0;
     }
     rgit = rgit->rg_next;
   }
 
-  return -1;  /* No suitable region found */
+  return -1; /* No suitable region found */
 }
 
-//#endif
+// #endif
