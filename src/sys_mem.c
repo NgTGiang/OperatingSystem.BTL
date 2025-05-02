@@ -12,36 +12,40 @@
 #include "libmem.h"
 #include "mm.h"
 
-//typedef char BYTE;
+typedef char BYTE;
 
-int __sys_memmap(struct pcb_t *caller, struct sc_regs* regs)
+int __sys_memmap(struct pcb_t *caller, struct sc_regs *regs)
 {
    int memop = regs->a1;
    BYTE value;
 
-   switch (memop) {
+   switch (memop)
+   {
    case SYSMEM_MAP_OP:
-            /* Reserved process case*/
-            break;
+      /* Reserved process case*/
+      __sys_memshow(caller, regs);
+      break;
    case SYSMEM_INC_OP:
-            inc_vma_limit(caller, regs->a2, regs->a3);
-            break;
+      inc_vma_limit(caller, regs->a2, regs->a3);
+      __sys_memshow(caller, regs);
+      break;
    case SYSMEM_SWP_OP:
-            __mm_swap_page(caller, regs->a2, regs->a3);
-            break;
+      __mm_swap_page(caller, regs->a2, regs->a3);
+      __sys_memshow(caller, regs);
+      break;
    case SYSMEM_IO_READ:
-            MEMPHY_read(caller->mram, regs->a2, &value);
-            regs->a3 = value;
-            break;
+      MEMPHY_read(caller->mram, regs->a2, &value);
+      regs->a3 = value;
+      __sys_memshow(caller, regs);
+      break;
    case SYSMEM_IO_WRITE:
-            MEMPHY_write(caller->mram, regs->a2, regs->a3);
-            break;
+      MEMPHY_write(caller->mram, regs->a2, regs->a3);
+      __sys_memshow(caller, regs);
+      break;
    default:
-            printf("Memop code: %d\n", memop);
-            break;
+      printf("Memop code: %d\n", memop);
+      break;
    }
-   
+
    return 0;
 }
-
-

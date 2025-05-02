@@ -1,0 +1,5 @@
+20 3
+alloc 256 1
+alloc 512 2
+free 1
+syscall 18 0

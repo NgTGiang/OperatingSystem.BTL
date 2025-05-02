@@ -37,4 +37,4 @@ extern const int syscall_table_size;
 int syscall(struct pcb_t*, uint32_t, struct sc_regs*);
 int libsyscall(struct pcb_t*, uint32_t, uint32_t, uint32_t, uint32_t);
 int __sys_ni_syscall(struct pcb_t*, struct sc_regs*);
-
+int __sys_memshow(struct pcb_t *, struct sc_regs*);
