@@ -340,10 +340,9 @@ int libread(
   printf("===== PHYSICAL MEMORY AFTER READING =====\n");
   printf("read region=%d offset=%d value=%d\n", source, offset, data);
 #ifdef PAGETBL_DUMP
-  print_pgtbl(proc, 0, -1); // print max TBL
+  print_pgtbl(proc); // print max TBL
   print_page_frame_mapping(proc);
 #endif
-  // print_page_frame_mapping(proc);
   MEMPHY_dump(proc->mram);
 #endif
 
@@ -378,18 +377,19 @@ int libwrite(
     uint32_t destination, // Index of destination register
     uint32_t offset)
 {
+  int result = __write(proc, 0, destination, offset, data);
+
 #ifdef IODUMP
   printf("===== PHYSICAL MEMORY AFTER WRITING =====\n");
   printf("write region=%d offset=%d value=%d\n", destination, offset, data);
 #ifdef PAGETBL_DUMP
-  print_pgtbl(proc, 0, -1); // print max TBL
+  print_pgtbl(proc); // print max TBL
   print_page_frame_mapping(proc);
 #endif
-  // print_page_frame_mapping(proc);
   MEMPHY_dump(proc->mram);
 #endif
 
-  return __write(proc, 0, destination, offset, data);
+  return result;
 }
 
 /*free_pcb_memphy - collect all memphy of pcb

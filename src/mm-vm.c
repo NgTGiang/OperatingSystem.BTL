@@ -59,7 +59,7 @@ struct vm_rg_struct *get_vm_area_node_at_brk(struct pcb_t *caller, int vmaid, in
   newrg = malloc(sizeof(struct vm_rg_struct));
 
   /* Update the new region boundary */
-  newrg->rg_start = cur_vma->vm_end;
+  newrg->rg_start = cur_vma->sbrk;
   newrg->rg_end = newrg->rg_start + alignedsz;
   newrg->rg_next = NULL;
 
@@ -124,6 +124,7 @@ int inc_vma_limit(struct pcb_t *caller, int vmaid, int inc_sz)
 
   /* Update VMA limit */
   cur_vma->vm_end = area->rg_end;
+  cur_vma->sbrk = area->rg_end;
 
   if (vm_map_ram(caller, area->rg_start, area->rg_end,
                  old_end, incnumpage, newrg) < 0)
