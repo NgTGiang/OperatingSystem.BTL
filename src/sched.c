@@ -47,7 +47,7 @@ void init_scheduler(void)
  *  Stateful design for routine calling
  *  based on the priority and our MLQ policy
  *  We implement stateful here using transition technique
- *  State representation   prio = 0 .. MAX_PRIO, curr_slot = 0..(MAX_PRIO - prio)
+ *  State representation prio = 0 .. MAX_PRIO, curr_slot = 0..(MAX_PRIO - prio)
  */
 struct pcb_t *get_mlq_proc(void)
 {
@@ -82,6 +82,29 @@ struct pcb_t *get_mlq_proc(void)
 
 	pthread_mutex_unlock(&queue_lock);
 	return proc;
+
+	// pthread_mutex_lock(&queue_lock);
+	// for (int prio = 0; prio < MAX_PRIO; prio++) {
+	// 	if (!empty(&mlq_ready_queue[prio]) && slot[prio] > 0) {
+	// 		proc = dequeue(&mlq_ready_queue[prio]);
+	// 		slot[prio]--;
+	// 		break;
+	// 	}
+	// }
+	// if (proc == NULL) {
+	// 	for (int prio = 0; prio < MAX_PRIO; prio++) {
+	// 		slot[prio] = MAX_PRIO - prio;
+	// 	}
+	// 	for (int prio = 0; prio < MAX_PRIO; prio++) {
+	// 		if (!empty(&mlq_ready_queue[prio])) {
+	// 			proc = dequeue(&mlq_ready_queue[prio]);
+	// 			slot[prio]--;
+	// 			break;
+	// 		}
+	// 	}
+	// }
+	// pthread_mutex_unlock(&queue_lock);
+	// return proc;
 }
 
 void put_mlq_proc(struct pcb_t *proc)

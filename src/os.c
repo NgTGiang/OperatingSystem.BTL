@@ -64,6 +64,13 @@ static void *cpu_routine(void *args)
 			proc = get_proc();
 			if (proc == NULL)
 			{
+				/* Fix infinite loop */
+				if (done)
+				{
+					printf("\tCPU %d stopped\n", id);
+					break;
+				}
+
 				next_slot(timer_id);
 				continue; /* First load failed. skip dummy load */
 			}
@@ -105,45 +112,24 @@ static void *cpu_routine(void *args)
 		}
 
 		/* Run current process */
-		int pc_before = proc->pc;
+		uint32_t pc_before = proc->pc;
 		struct inst_t *inst = &proc->code->text[pc_before];
-
-		/* Lưu lại các giá trị trước khi thực thi */
-		int arg0 = inst->arg_0;
-		int arg1 = inst->arg_1;
-		int arg2 = inst->arg_2;
-		// int arg3 = inst->arg_3;
-
-		/* Biến để lưu giá trị đọc được từ bộ nhớ */
-		int read_value = 0;
-
-		/* Debug: In giá trị inst->arg_2 trước khi chạy */
-		// if (inst->opcode == READ) {
-		// 	printf("DEBUG - Before run: inst->arg_2 = %d\n", inst->arg_2);
-		// }
 
 		run(proc);
 		time_left--;
 
-		/* Debug: In giá trị inst->arg_2 sau khi chạy */
-		if (inst->opcode == READ) {
-			// printf("DEBUG - After run: inst->arg_2 = %d\n", inst->arg_2);
-			read_value = inst->arg_2;
-		}
-
 		/* Print debug info với giá trị ban đầu */
 		switch (inst->opcode)
 		{
-		case CALC:
-			// printf("calc\n");
-			break;
 		case ALLOC:
+			struct vm_rg_struct *rg = get_symrg_byid(proc->mm, inst->arg_1);
+
 			printf("===== PHYSICAL MEMORY AFTER ALLOCATION =====\n");
-			printf("PID=%d - Region=%d - Address=%08x - Size=%d byte\n",
-						 proc->pid, arg1, arg2, arg0);
+			printf("PID=%d - Region=%d - Address=%08lx - Size=%d byte\n",
+						 proc->pid, inst->arg_1, rg->rg_start, inst->arg_0);
 			if (proc->mm != NULL)
 			{
-				print_pgtbl(proc, 0, 1024);
+				print_pgtbl(proc);
 				print_page_frame_mapping(proc);
 			}
 			printf("================================================================\n");
@@ -153,38 +139,15 @@ static void *cpu_routine(void *args)
 			printf("PID=%d - Region=%d\n", proc->pid, inst->arg_0);
 			if (proc->mm != NULL)
 			{
-				print_pgtbl(proc, 0, 1024);
+				print_pgtbl(proc);
 				print_page_frame_mapping(proc);
 			}
 			printf("================================================================\n");
 			break;
+		case CALC:
 		case READ:
-			// printf("===== PHYSICAL MEMORY AFTER READING =====\n");
-			// printf("read region=%d offset=%d value=%d\n",
-			// 			 arg0, arg1, read_value);
-			// if (proc->mm != NULL)
-			// {
-			// 	print_pgtbl(proc, 0, 1024);
-			// 	print_page_frame_mapping(proc);
-			// }
-			// printf("================================================================\n");
-			// MEMPHY_dump(proc->mram);
-			break;
 		case WRITE:
-			// printf("===== PHYSICAL MEMORY AFTER WRITING =====\n");
-			// printf("write region=%d offset=%d value=%d\n",
-			// 			 inst->arg_1, inst->arg_2, inst->arg_0);
-			// if (proc->mm != NULL)
-			// {
-			// 	print_pgtbl(proc, 0, 1024);
-			// 	print_page_frame_mapping(proc);
-			// }
-			// printf("================================================================\n");
-			// MEMPHY_dump(proc->mram);
-			break;
 		case SYSCALL:
-			// printf("syscall %d %d %d %d\n",
-			// 			 arg0, arg1, arg2, arg3);
 			break;
 		}
 

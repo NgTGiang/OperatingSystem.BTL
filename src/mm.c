@@ -357,27 +357,26 @@
    return 0;
  }
  
- int print_pgtbl(struct pcb_t *caller, uint32_t start, uint32_t end)
+ int print_pgtbl(struct pcb_t *caller)
  {
-   int pgn_start, pgn_end;
-   int pgit;
- 
-   if (end == -1)
-   {
-     pgn_start = 0;
-     struct vm_area_struct *cur_vma = get_vma_by_num(caller->mm, 0);
-     end = cur_vma->vm_end;
+   if (caller == NULL) 
+   { 
+    printf("NULL caller\n"); 
+    return -1;
    }
-   pgn_start = PAGING_PGN(start);
-   pgn_end = PAGING_PGN(end);
+
+   uint32_t pgn_start, pgn_end;
+   int pgit;
+  
+   struct vm_area_struct *cur_vma = get_vma_by_num(caller->mm, 0);
+   pgn_start = cur_vma->vm_start;
+   pgn_end = cur_vma->vm_end;
  
-   printf("print_pgtbl: %d - %d", start, end);
-   if (caller == NULL) { printf("NULL caller\n"); return -1;}
+   printf("print_pgtbl: %d - %d", pgn_start, pgn_end);
    printf("\n");
  
    for (pgit = pgn_start; pgit < pgn_end; pgit++)
    {
-    // FIXED
     if (caller->mm->pgd[pgit] != 0) {
       printf("%08ld: %08x\n", pgit * sizeof(uint32_t), caller->mm->pgd[pgit]);
     }

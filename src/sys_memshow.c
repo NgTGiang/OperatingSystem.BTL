@@ -66,7 +66,7 @@ int __sys_memshow(struct pcb_t *caller, struct sc_regs *regs)
     
     // Hiển thị thông tin về bảng trang
     printf("\nPage Table Information:\n");
-    print_pgtbl(caller, 0, PAGING_MAX_PGN - 1);
+    print_pgtbl(caller);
     
     // Hiển thị ánh xạ trang-khung
     printf("\nPage-Frame Mapping:\n");
